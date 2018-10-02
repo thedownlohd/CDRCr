@@ -1,0 +1,225 @@
+---
+title: "HW_02"
+author: "Kendall Loh"
+date: "10/1/2018"
+output:
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Homework 02 - Data Wrangling
+
+## Kendall Loh
+
+### Library Setup
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+library(readr)
+library(tidyverse)
+library(plyr)
+library(knitr)
+library(ggplot2)
+
+```
+
+
+### Read In Data
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+messydata <- read_csv("C:/Users/kenda/Desktop/U.S._Chronic_Disease_Indicators__CDI_.csv")
+
+```
+
+
+
+
+### Selection of Data and Tidying
+
+#### 1. Remove all columns you do not need for the analysis.
+
+```{r echo=FALSE, message=FALSE}
+
+semiclean <- messydata %>%
+  select(LocationDesc, LocationAbbr, YearEnd, Question, DataValueType, DataValue, DataValueUnit, DatavalueFootnote, StratificationCategory1, Stratification1)
+
+```
+
+
+
+
+
+
+#### 2. Select the following variables and remove all others: Binge Drinking (Overall, Male, Female), and Poverty (Overall)
+```{r echo=FALSE, message=FALSE}
+
+binge_all <- semiclean %>%
+  filter(Question == "Binge drinking prevalence among adults aged >= 18 years") %>%
+  filter(DataValueType == "Crude Prevalence") %>%
+  filter(StratificationCategory1 == "Overall") %>%
+  filter(Stratification1 == "Overall") %>%
+  arrange(LocationDesc, desc(YearEnd))
+  
+
+binge_male <- semiclean %>%
+  filter(Question == 'Binge drinking prevalence among adults aged >= 18 years') %>%
+  filter(DataValueType == "Crude Prevalence") %>%
+  filter(StratificationCategory1 == "Gender") %>%
+  filter(Stratification1 == "Male") %>%
+  arrange(LocationDesc, desc(YearEnd))
+
+binge_female <- semiclean %>%
+  filter(Question == 'Binge drinking prevalence among adults aged >= 18 years') %>%
+  filter(DataValueType == "Crude Prevalence") %>%
+  filter(StratificationCategory1 == "Gender") %>%
+  filter(Stratification1 == "Female") %>%
+  arrange(LocationDesc, desc(YearEnd))
+
+poverty <- semiclean %>%
+  filter(Question == "Poverty") %>%
+  filter(DataValueType == "Crude Prevalence") %>%
+  filter(StratificationCategory1 == "Overall") %>%
+  filter(Stratification1 == "Overall") %>%
+  arrange(LocationDesc, desc(YearEnd))
+
+```
+
+
+#### 3. Convert the dataset to a tidy data set using the commands from the tidyr package
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+binge_all1 <- spread(binge_all, key=Question, value=DataValue) %>%
+  select(-DatavalueFootnote, -StratificationCategory1, -Stratification1, -DataValueType, -DataValueUnit)
+
+binge_all1 <- plyr::rename(binge_all1, c('Binge drinking prevalence among adults aged >= 18 years' = 'binge_all'))
+
+binge_female1 <- spread(binge_female, key=Question, value=DataValue) %>%
+  select(-StratificationCategory1, -DatavalueFootnote, -Stratification1, -DataValueType, -DataValueUnit)
+
+binge_female1 <- plyr::rename(binge_female1, c('Binge drinking prevalence among adults aged >= 18 years' = 'binge_female'))
+
+binge_male1 <- spread(binge_male, key=Question, value=DataValue) %>%
+  select(-DatavalueFootnote, -StratificationCategory1, -Stratification1, -DataValueType, -DataValueUnit)
+
+binge_male1 <- plyr::rename(binge_male1, c('Binge drinking prevalence among adults aged >= 18 years' = 'binge_male'))
+
+
+poverty1 <- spread(poverty, key=Question, value=DataValue) %>%
+  select(-DatavalueFootnote, -StratificationCategory1, -Stratification1, -DataValueType, -DataValueUnit)
+
+
+
+binge_clean <- left_join(binge_all1, binge_female1) %>%
+  left_join(binge_male1)  %>%
+  left_join(poverty1)
+
+
+```
+
+#### 4. Rename the variables to follow the format below. `state`, `stateabb`, `year`, `binge_all`, `binge_male`, `binge_female`, `poverty`]. Save the cleaned dataset as binge_clean.csv.
+```{r echo=FALSE, message=FALSE}
+names(binge_clean) <- c("state", "stateabb", "year", "binge_all", "binge_female", "binge_male", "poverty")
+write.csv(binge_clean, file="binge_clean.csv")
+```
+
+
+### Data Transformation and Summary Results
+
+#### 5. Produce a table that shows the `overall`, `female` and `male` binge drinking prevalences across U.S. states in the most recent year of data for the Top 10 binge drinking states. (i.e., the ones with the highest prevalence in the overall population).
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+transform_overall <- binge_all1 %>%
+  filter(YearEnd == "2016") %>%
+  arrange(desc(binge_all))
+
+transform_female <- binge_female1 %>%
+  filter(YearEnd == "2016") %>%
+  arrange(desc(binge_female))
+
+transform_male <- binge_male1 %>%
+  filter(YearEnd == "2016") %>%
+  arrange(desc(binge_male))
+
+Top_10_Drinking <- left_join(transform_overall, transform_female) %>%
+  left_join(transform_male)
+
+Top_10_Drinking <- top_n(Top_10_Drinking, 10)
+names(Top_10_Drinking) <- c('state', 'stateabb', 'year', 'binge_all', 'binge_female', 'binge_male')
+Top_10_Drinking_Table <- data.frame(Top_10_Drinking)
+Top_10_Drinking_Table <- kable(Top_10_Drinking_Table)
+
+```
+
+```{r}
+print(Top_10_Drinking_Table)
+```
+
+#### 6. Make a scatterplot showing the correlation between the overall `poverty` prevalence in a state, and the prevalence of binge drinking in the `overall` population. *Comment Briefly*
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+
+scatterdata <- left_join(poverty1, binge_all1)
+
+g <- ggplot(scatterdata, aes(scatterdata$Poverty, scatterdata$binge_all))+ ggtitle('Correlation of Poverty and Binge Drinking Rates 2011-2016') + xlab('Poverty Rate') + ylab('Binge Drinking Rate')
+p <- g + geom_point() + geom_smooth()
+```
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+scatterdataAK <- scatterdata %>% 
+  filter(LocationDesc == "Alaska")
+
+f <- ggplot(scatterdataAK, aes(scatterdataAK$Poverty, scatterdataAK$binge_all)) + ggtitle('Correlation of Poverty and Binge Drinking Rates in Alaska 2011-2016') + xlab('Poverty Rate') + ylab('Binge Drinking Rate')
+e <- f + geom_point() + geom_smooth() 
+
+```
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+print(p)
+
+print(e)
+
+```
+
+Above are two plots, one for the correlation between poverty rates and binge drinking across all 50 states and one for the poverty rate of a single state, which in this case is Alaska. As you can see, there does not appear to be a correlation between poverty drinking and binge drinking. Interestingly, judging from the top 5 and 10 tables, the top binge drinking states vary widely, from rural to urban, different environments, weather, etc. 
+
+#### 7. Calculate the average annual growth rates (in percent) of `overall` binge drinking across states for the years the data is available. 
+
+##### Suggestion: group the data by state, and use the `first()` and `last()` commands in the `summarize` command followed by dividing the calculated percentage increase by the number of years. provide a table of the **5 states with the largest increases** and the **5 states with the largest decreases** in `overall` binge drinking prevalence over the time period.
+
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, message=FALSE}
+
+detach(package:plyr, unload=TRUE)
+
+lastset <- binge_clean %>% 
+  dplyr::group_by(state) %>% 
+  mutate(ave_growth = ((dplyr::last(binge_all) - dplyr::first(binge_all))))
+lastset$ave_growth <- (lastset$ave_growth)/6
+
+
+large_inc <- lastset %>% 
+  arrange(desc(ave_growth)) %>% 
+  select(state, year, ave_growth) %>% 
+  filter (year == "2016") %>% 
+  select(-year) 
+
+k_large_inc <- kable(head(large_inc, 5))
+
+
+small_inc <- lastset %>% 
+  arrange(ave_growth) %>% 
+  select(state, year, ave_growth) %>% 
+  filter (year == "2016") %>% 
+  select(-year) 
+
+k_small_inc <- kable(head(small_inc, 5))
+```
+
+```{r}
+k_large_inc
+k_small_inc
+```
+
+
