@@ -1,0 +1,160 @@
+---
+title: "Kendall_Loh_hw07"
+author: "Kendall Loh"
+date: "11/7/2018"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(tidyr)
+library(plyr)
+```
+
+## 1. Define the base URL
+### In the documentation, find the API Endpoint for csv (Hint: if there is a json at the end, replace json with csv).
+
+```{r}
+
+endpoint <- "http://data.lacity.org/resource/7fvc-faax.csv"
+
+```
+
+
+
+
+## 2. Send a simple GET request
+### Using httr, send a simple GET request to the base URL. Check for the status and structure of the response (print only the first level in your ouput using the option max.level).
+
+
+```{r}
+library(httr)
+
+req_result <- httr::GET("http://data.lacity.org/resource/7fvc-faax.csv")
+# can also use query = list('$limit' = 10)
+print(str(req_result, max.level=1))
+
+```
+
+
+
+
+
+## 3. Get the content of the response
+### Retrieve the content of the response. What are the dimensions of the data frame? Tabulate the areas of the observations included.
+
+```{r}
+get_result <- GET("http://data.lacity.org/resource/7fvc-faax.csv")
+content1 <- content(req_result)
+
+print(count(content1$area_name))
+
+```
+
+There are 36 variables and 1000 observations in the dataframe, as shown above. 
+
+
+
+
+
+## 4. Get your access token
+### As you have noticed, our initial request yieled only a small part of the data. For full access (actually the API seems not to care much, but for exercise’s sake let’s do it), you will need an API key to access the data. Sign up here https://data.lacity.org/profile/app_tokens and get your token.
+
+
+### To keep your key safe, it is always better not to add it to your code. Place your token in the R environment file (as shown in class). Add the following lines (with your access info) to the `.Renviron` file. (Note: if you have trouble, take a look at this [more extended discussion of the `.Renviron` file](https://csgillespie.github.io/efficientR/3-3-r-startup.html#renviron).)
+
+### App Token for https://data.lacity.org
+### LACRIME_APP_TOKEN = ...
+### LACRIME_SECRET_TOKEN =  ...
+
+### Now, resend your query with the fields: `"$limit" = "10000"` and `"$$app_token" =  Sys.getenv("LACRIME_APP_TOKEN")` as query parameteurs and show the status of the server response.
+
+
+```{r}
+
+
+parameter_response <- httr::GET("http://data.lacity.org/resource/7fvc-faax.csv", query = list('$limit' = '10000', '$$app_token' = Sys.getenv("LACRIME_APP_TOKEN")))
+#Making sure my token works Sys.getenv("LACRIME_APP_TOKEN")
+
+#status code is 200!
+parameter_response
+parameter_response$status_code
+
+content2 <- content(parameter_response)
+
+
+```
+
+
+
+
+## 5. Limiting your query
+### Choose at least two more query field parameters from the API description [the blueish list on the bottom of the page], pass them to the query parameter list, and run the query (providing the server status again). Describe briefly in words what your query is selecting.
+
+So here, I ran a second query using the `vict_age` and `time_occ` parameters. `vict_age` represents the age of the victim of the crime, and the `time_occ` paramter represents the time at which the crime occurred. Based on this query, there were 676 crimes committed at time = 0100 and whose victim age was 22. Additional paramters are limit of 10000 observations, which the other queries limit anyway, and the apptoken data from my environment.
+
+```{r}
+
+parameter_response2 <- httr::GET("http://data.lacity.org/resource/7fvc-faax.csv", query = list('$limit' = '10000', 'vict_age' = '22', 'time_occ' = '0100', '$$app_token' = Sys.getenv("LACRIME_APP_TOKEN")))
+
+#'$limit' = 10000, 
+parameter_response2
+parameter_response2$status_code
+
+content3 <- content(parameter_response2)
+
+```
+
+
+
+
+## 6. Locations
+### The dataset already provides us with good geographic information on latitude and longitude and some address information (for privacy reasons, the locations are approximate).
+
+### Let’s try to use the Google Maps reverse geocode API to find the addresses for some locations.
+
+### The query we will need to look like this:
+
+"https://maps.googleapis.com/maps/api/geocode/json?latlng=-37.866963,144.980615&key=YOUR_API_KEY"
+
+### The documentation of the API is here.
+
+### Write a loop to find the addresses for 50 entries in your dataset based on their latitude and longitude. The object you get back is a bit verbose – aim for the formatted_address part. In the loop, add a status check (using an if statement) that will warn us if something goes awry. Lastly, add a Sys.sleep pause of 0.1 seconds after each URL retrieval to make sure we use the Google Maps API responsibly.
+
+
+```{r}
+#Pulling out the latitude/longitude numbers
+# I limited here because my computer couldn't handle working with the full set of data
+latlong = content2$location_1
+data <- latlong[1:50]
+data_plain <- regmatches(data, gregexpr("(?<=\\().*?(?=\\))", data, perl=T))
+data_plain <- t(data_plain)
+data_plain <- as.data.frame(data_plain)
+data_plain <- as.data.frame(t(data_plain))
+
+new_latlong <- data_plain %>% separate(V1, c('Latitude', 'Longitude'), sep=" ")
+
+DF = new_latlong
+DF$Coordinates = paste(DF$Longitude, DF$Latitude, sep = ",")
+
+a <- 1
+for (i in DF$Coordinates[1:50]) {
+  response <- GET("https://maps.googleapis.com/maps/api/geocode/json", query = list("latlng" = i, "key" = Sys.getenv("GMAPS_API_TOKEN")))
+  print(response$status_code)
+  if(http_error(response)){
+    warning("GET REQUEST ERROR")
+  } else {
+    address <- print(content(response)$results[[1]]$formatted_address)
+    DF$Pulled_address[a] <- address
+    }
+  Sys.sleep(0.1)
+  a <- a + 1
+}
+
+View(DF)
+```
+
+
