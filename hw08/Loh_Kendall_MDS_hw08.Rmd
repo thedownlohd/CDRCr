@@ -1,0 +1,164 @@
+---
+title: "QMSS G5072 Homework 8"
+author: Kendall Loh
+date: 2018-11-22
+always_allow_html: yes
+output: 
+  html_document:
+    keep_md: true
+---
+
+Writing a simple API client
+============================
+
+# Task
+
+The task is to use the `httr` package (do not use possibly existing specific R packages for the API) to:  
+
+  - interact with the API  
+  - create a dataset with multiple records by requesting data from the API using the `httr` package  
+  - write a simple API client, i.e. a function that would make downloading/interacting with the API simple for a R user who does not know `httr` 
+
+## 1. Choose an API
+
+### a) Choose an API and briefly describe the type of data you can obtain from it. Note: Please do not use any of the APIs we covered in lecture (e.g. Twitter, NYTimes, Enigma, Zillow etc.).
+
+The API I chose to work with is 'An API of Ice and Fire', which is an API containing data related to the hit book and TV series Game of Thrones.
+
+The API contains data tables which show lists of books, characters, and houses, and how they are related, as well as information about the characters and houses like name, date of birth and date of death, and how each character and house is related to one another.
+
+### b) Provide a link to the API documentation and  
+
+link to API: "https://www.anapioficeandfire.com/Documentation#authentication"
+
+### c) the base URL of the API you intend to use.
+base <- "https://www.anapioficeandfire.com/api/"
+
+## 2. Authentication
+
+### a) Briefly explain how the API authenticates the user. 
+### b) Apply for an API key if necessary and provide the information (with relevant URL) how that can be done.
+
+As far as authentication goes, An API of Ice And Fire is considered an 'open' API. This means that one does not need an API key or any other type of authentication to query the API for data.
+
+
+## 3. Send a Simple GET request
+
+### a) Execute a simple GET request to obtain a small amount of data from the API. Describe a few query parameters and add them to the query. If you have a choice of the output the API returns (e.g. XML or JSON), I suggest to choose JSON because it easier to work with. Your output here should include the code for the `GET` request, including the query parameters.  
+### b) Check the status of the request (using `http_status`).  
+### c) Check the type of the response (e.g. XML, JSON, csv using `http_type`).
+
+```{r}
+# Getting a 'small' amount of data, or the first page of character data that is returned from the API.
+library(httr)
+library(plyr)
+url <- "https://www.anapioficeandfire.com/api/"
+API <- GET(url)
+# The query params I chose to use are page = 1 and size of 50
+query_params = list("characters?page=1&pageSize=50")
+API1 <- paste(url,query_params,sep="")
+API1
+g1t <- GET(API1)
+g1t
+# Printing http_status of get request
+print(http_status(g1t))
+
+# Printing http_type of get request
+print(http_type(g1t))
+
+
+```
+
+
+
+## 4. Parse the response and Create a dataset
+
+### a) Take the response returned by the API and turn it into a useful R object (e.g. a list, vector, or data frame). Show the code how this is done.  
+
+```{r}
+library(jsonlite)
+#taking the content from the get request above
+useful <- content(g1t, as = "text")
+df_object <- fromJSON(useful)
+head(df_object)
+```
+
+### b) Using the API, create a dataset (in data frame format) for multiple records. I'd say a sample size greater than 100 is sufficient for the example but feel free to get more data if you feel ambitious and the API allows you to do that fairly easily. The dataset can include only a small subset of the returned data. Just choose some interesting features. There is no need to be inclusive here.
+```{r}
+url1 <- "https://www.anapioficeandfire.com/api/"
+API1 <- GET(url1)
+query1 = "characters?page=2&pageSize=50"
+API2 <- paste(url1,query1,sep="")
+
+
+g2t <- GET(API2)
+
+
+useful2 <- content(g2t, as = "text")
+library(jsonlite)
+df1_object <- fromJSON(useful2, simplifyDataFrame = TRUE)
+
+#stacking the two dataframes, for a total of 100 character observations
+total <- rbind(df_object, df1_object)
+
+## This table is 100 rows by 16 columns
+dim(total)
+
+
+print(head(total))
+```
+
+### c) Provide some summary statistics of the data. Include the data frame in a .RDS file (using `saveRDS`) called `data.rds` with your submission for the grader.
+
+```{r}
+sum1 <- count(total$gender)
+sum2 <- count(total$culture)
+summary <- rbind.data.frame(sum1, sum2)
+#printing summary data, just counts of the genders and cultures of the included data.
+print(summary)
+
+#I created two RDS files, as I wasn't sure which was supposed to be included in the file. 
+
+saveRDS(total, "data.rds")
+saveRDS(summary, "summarydata.rds")
+
+```
+
+## 5. API Client
+
+### Lastly, let's try to wrap the code from the previous sections into a simple API client function. For example, in the `ZillowR` package, the command ### `GetSearchResults()` can be called with the following command
+
+### GetSearchResults(address = '2114 Bigelow Ave', citystatezip = 'Seattle, WA')
+
+### For your API function, try to create a simple function that does the following things:
+
+### - allows to user to specify some smallish set of query parameters (from Q.3a)  
+### - run a GET request with these parameters  
+### - check the status of the request the server returns and inform the user of any errors (from Q.3b)  
+### - parse the response and return a R object to the user of the function. You can choose whether returning a list (from Q.4a) or a data frame (from ### Q.4b) is best.
+ 
+### Note: There is no need to make this into an R package here. A simple function is sufficient.
+
+
+```{r}
+# This function allows the user to choose which page they want to print from the api via an "x" value which they choose.
+AAOIAF_api <- function(x) {
+  url3 <- modify_url("http://www.anapioficeandfire.com/api/characters", path = paste("/api/characters?page=", x, sep = ""))
+  step_1 <- GET(url3)
+  step_2 <- content(step_1, as = "text")
+  object <- fromJSON(step_2)
+  print(object)
+  saveRDS(object,"function.rds")
+  print(http_status(step_1))
+  print(http_error(step_1))
+}
+  AAOIAF_api(3)
+```
+
+
+
+
+
+### Submission
+
+Please follow the [instructions](/Exercises/homework_submission_instructions.md) to submit your homework. The homework is due on Monday, November 19 at 5pm.
