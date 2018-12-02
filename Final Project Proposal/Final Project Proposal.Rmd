@@ -1,0 +1,43 @@
+---
+title: "QMSS G5072 Final Project Proposal"
+author: "Kendall Loh"
+date: "12/1/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Final Project Proposal
+
+**Name of Project:** Connecticut Open Data Package \
+**Type of Project:** A1 \
+**Brief description of the purpose:** As a current resident of New Haven, I think it is important to make open data tools as approachable as possible. As such, I'd like to create an R package for available data related to the state of Connecticut. The package would allow developers to access this state data directly, and hopefully provide statistical analysis to add value to policy discussions or help steer governmental priorities.
+
+Connecticut as a state sometimes struggles to attract job creating companies - New Haven just recently lost a major pharmaceutical company to Boston. Companies are attracted to big metropolitan cities like New York and Boston, and increased data transparency may help promote a culture of innovation and tech in our state.
+
+
+### Links to data sources / API etc. - Outline the technical steps / challenges you plan to address and include in your submission.
+
+https://data.ct.gov/ (536 datasets) \
+http://ctdata.org/ (223 datasets)
+
+- Query API to obtain data about the different CT data. Between the two websites, there are approximately 750 datasets, so I will probably pare the final number down considerably.
+
+- Handle, parse, and transform JSON into a data frame.
+
+- Extract and clean data
+
+- Process strings and use regular expressions (if applicable)
+
+- Use functions to handle repetitive tasks
+
+- Make it into an R package
+
+
+### Are there any significant hurdles that you have doubts about? Would not solving them render the project incomplete?
+
+It looks like each dataset has a different API link, so I will want to check to see if it's possible to automate that process at all.
+
+Another thing to consider would be to create more than one package based on data theme, but am very open to suggestions as to how to organize this (if at all).
