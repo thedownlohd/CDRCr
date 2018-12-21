@@ -1,0 +1,20 @@
+Package: KLohMDSFinal
+Type: Package
+Title: ED CRDC R Package 
+Version: 0.9.0
+Authors@R: person("Kendall", "Loh", email = "kendall.loh@columbia.edu",
+      role = c("aut", "cre"))
+Description: This file gives access to the Civil Rights Data Collection (CRDC) API, and specifically the Public School Enrollment data for 2013-2014.
+    Regrettably, the other two other CRDC APIs, for Chronic Absenteeism in 2013-2014 and Out-of-School Suspension in 2013-2014 are not functional as of December, 2018. 
+    This package also contains a small 2010 Census dataset, in order to provide some information of state populations generally when comparing with population of school aged children.
+Depends: R (>= 2.10)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports: httr, ggplot2, dplyr, jsonlite, magrittr, plyr
+importFrom: stats, filter
+Suggests: knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: knitr
+RoxygenNote: 6.1.0.9000
