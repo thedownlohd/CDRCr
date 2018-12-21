@@ -1,0 +1,163 @@
+---
+title: "Introduction to CRDCdata"
+author: "Kendall Loh"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This package allows users to access data posted on the United States government Department of Education official developer hub. Specifically, the Public School Enrollment API, 1 of 3 'Civil Rights Data Collection' (CRDC) APIs. This data provides Public School Information on the number of students enrolled in public education in 2013-2014 by race/ethnicity, gender, and program status. Unfortuntaely, due to the current political climate, the CRDC API has been limited; in the data dictionary for the Public School Enrollment, there are almost `2000` categories of data. As of December 2018, only 66 categories of data remain 'GET-able'. As such, the author of this R Package plans to update the package with new capabilities and filtering options as data becomes available.
+
+
+## Vignette Info
+
+Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
+
+## Function1: GET_function
+
+In order to "GET" the most up-to-date data available from the CRDC Developer Hub, we'll use the `CRDC_api` function. This will call the GET function on the CRDC API endpoint and converts the content into a useable dataframe.
+
+```{r, eval=FALSE}
+
+library("KLohMDSFinal")
+KLohMDSFinal::CRDC_api(Sys.getenv(api_key))
+
+```
+
+## Function2: m_f_count
+
+One useful function is to look calculate the number of male and female students in a given state. This function is also generalizble, and could potentially be run on updated school year data.
+
+```{r, eval=FALSE}
+
+m_f_count <- function(x) {
+  LEA_STATE <- TOT_ENR_F <- TOT_ENR_M <- NULL
+  if (x %in% CRDCdata$LEA_STATE) {
+    CRDCdata %>% select(LEA_STATE, TOT_ENR_F, TOT_ENR_M) %>%
+      dplyr::filter(CRDCdata$LEA_STATE == x) %>%
+      summarise_each(funs(sum), TOT_ENR_F, TOT_ENR_M)
+  }
+  else {
+    print("FAIL!")
+  }
+}
+
+```
+
+
+## Function3: tot_pop
+
+In addition to finding the number of male and female students separately, we can also find the sum total of all public school students in a given state. Using the function `tot_pop`, we can input any state abbreviation to find all K-12 students.
+
+```{r}
+
+tot_pop <- function(x) {
+  LEA_STATE <- TOT_ENR_F <- TOT_ENR_M <- NULL
+  if (x %in% CRDCdata$LEA_STATE) {
+    CRDCdata %>% select(LEA_STATE, TOT_ENR_F, TOT_ENR_M) %>%
+      dplyr::filter(CRDCdata$LEA_STATE == x) %>%
+      summarise_each(funs(sum), TOT_ENR_F, TOT_ENR_M) %>%
+      sum()
+  }
+  else {
+    print("FAIL!")
+  }
+}
+
+```
+
+
+## Function4: numschools_state
+
+`numschools_state` is a simple function which returns the total number of schools in a given state for the 2013-2014 academic year.
+
+```{r}
+numschools_state <- function(x) {
+  LEA_STATE <- NULL
+  if (x %in% CRDCdata$LEA_STATE) {
+    count(filter(CRDCdata, LEA_STATE == x))
+  } else {
+    print("This is not a state!")
+  }
+}
+
+```
+
+
+## Function5: by_school_enrollment
+`by_school_enrollment` allows the user to find enrollment data by specific school name. Important to note that the input should be in all caps.
+
+
+```{r}
+
+by_school_enrollment <- function(x) {
+  SCH_NAME <- LEA_STATE <- TOT_ENR_F <- TOT_ENR_M <- NULL
+  if (x %in% CRDCdata$SCH_NAME) {
+    CRDCdata %>% select(SCH_NAME, LEA_STATE, TOT_ENR_F, TOT_ENR_M) %>%
+      dplyr::filter(CRDCdata$SCH_NAME == x)
+  }
+  else {
+    print("FAIL!")
+  }
+}
+
+
+```
+
+## Function6: graphit
+
+`graphit` allows a user to pick a column of data separated by state and plot the data.
+
+
+```{r}
+graphit <- function(data, column1) {
+  ggplot(data=data, aes_string(x="Abbreviation", y = column1)) + geom_point(alpha=1/4) + ggtitle(column1) + theme(axis.text.x = element_text(angle = 90))
+}
+```
+
+
+
+
+
+
+
+## Figures
+
+The figure sizes have been customised so that you can easily put two images side-by-side. 
+
+```{r, fig.show='hold'}
+plot(1:10)
+plot(10:1)
+```
+
+You can enable figure captions by `fig_caption: yes` in YAML:
+
+    output:
+      rmarkdown::html_vignette:
+        fig_caption: yes
+
+Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
+
+## More Examples
+
+You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
+
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(mtcars, 10))
+```
+
+Also a quote using `>`:
+
+> "He who gives up [code] safety for [code] speed deserves neither."
+([via](https://twitter.com/hadleywickham/status/504368538874703872))
+
